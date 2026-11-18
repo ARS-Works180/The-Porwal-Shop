@@ -45,7 +45,6 @@
           animation: {
             'fade-in': 'fadeIn 0.4s ease-out forwards',
             'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-            'pulse-glow': 'pulseGlow 3s infinite',
           },
           keyframes: {
             fadeIn: {
@@ -55,10 +54,6 @@
             slideUp: {
               '0%': { opacity: '0', transform: 'translateY(20px)' },
               '100%': { opacity: '1', transform: 'translateY(0)' },
-            },
-            pulseGlow: {
-              '0%, 100%': { opacity: '0.4' },
-              '50%': { opacity: '0.8' },
             }
           }
         }
@@ -298,15 +293,35 @@
     ];
 
     function App() {
-      const [products, setProducts] = useState(INITIAL_PRODUCTS);
-      const [cart, setCart] = useState([]);
+      // Load products from localStorage or fallback to initial products
+      const [products, setProducts] = useState(() => {
+        const saved = localStorage.getItem('porwal_store_products');
+        return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+      });
+
+      // Save products to localStorage whenever they change
+      useEffect(() => {
+        localStorage.setItem('porwal_store_products', JSON.stringify(products));
+      }, [products]);
+
+      const [cart, setCart] = useState(() => {
+        const saved = localStorage.getItem('porwal_store_cart');
+        return saved ? JSON.parse(saved) : [];
+      });
+
+      useEffect(() => {
+        localStorage.setItem('porwal_store_cart', JSON.stringify(cart));
+      }, [cart]);
+
       const [favorites, setFavorites] = useState([]);
       const [searchQuery, setSearchQuery] = useState("");
       const [selectedCategory, setSelectedCategory] = useState("All");
       const [isCartOpen, setIsCartOpen] = useState(false);
       
-      // Admin Authentication State
-      const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+      // Admin Authentication State (persisted with session/local storage)
+      const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => {
+        return localStorage.getItem('porwal_admin_auth') === 'true';
+      });
       const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
       const [adminDashboardOpen, setAdminDashboardOpen] = useState(false);
       const [adminPin, setAdminPin] = useState("");
@@ -384,6 +399,7 @@
         // Default admin password set as 'porwal2026'
         if (adminPin === "porwal2026") {
           setIsAdminAuthenticated(true);
+          localStorage.setItem('porwal_admin_auth', 'true');
           setIsAdminLoginOpen(false);
           setAdminDashboardOpen(true);
           setAdminPin("");
@@ -399,6 +415,12 @@
         } else {
           setIsAdminLoginOpen(true);
         }
+      };
+
+      const handleAdminLogout = () => {
+        setIsAdminAuthenticated(false);
+        localStorage.removeItem('porwal_admin_auth');
+        setAdminDashboardOpen(false);
       };
 
       const deleteProduct = (id) => {
@@ -469,7 +491,7 @@
           description: "",
           tag: "New Arrival"
         });
-        alert("Product successfully added and published to the live store!");
+        alert("Product successfully added and saved to store persistence!");
       };
 
       return (
@@ -1127,7 +1149,7 @@
                   </div>
                   <div className="flex items-center gap-3">
                     <button 
-                      onClick={() => { setIsAdminAuthenticated(false); setAdminDashboardOpen(false); }}
+                      onClick={handleAdminLogout}
                       className="text-xs text-rose-400 hover:underline flex items-center gap-1"
                     >
                       <Icon name="LogOut" className="w-3.5 h-3.5" />
